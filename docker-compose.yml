@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+  api:
+    container_name: beathub_api
+    build:
+      context: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET:-your_dev_jwt_secret}
+      DB_HOST: mongodb://db:27017/beathub_dev
+      MONGO_URI: mongodb://devuser:devpassword@db:27017/beathub_dev?authSource=admin
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - beathub-net
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - node -e "const net=require('net');const s=net.connect(3000,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1));setTimeout(()=>process.exit(1),3000);"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  db:
+    container_name: beathub_db
+    image: mongo:6
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-devuser}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-devpassword}
+    volumes:
+      - db-data:/data/db
+    networks:
+      - beathub-net
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "echo 'db.runCommand({ ping: 1 }).ok' | mongosh mongodb://$$MONGO_INITDB_ROOT_USERNAME:$$MONGO_INITDB_ROOT_PASSWORD@localhost:27017/admin --quiet | grep 1"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  db-data:
+
+networks:
+  beathub-net:
