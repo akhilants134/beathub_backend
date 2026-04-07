@@ -13,8 +13,8 @@ COPY . .
 FROM node:18-alpine AS runner
 
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
-USER appuser
 WORKDIR /home/appuser/app
+ENV NODE_ENV=production
 
 COPY --from=builder --chown=appuser:appgroup /app/package*.json ./
 COPY --from=builder --chown=appuser:appgroup /app/node_modules ./node_modules
@@ -25,6 +25,8 @@ COPY --from=builder --chown=appuser:appgroup /app/models ./models
 COPY --from=builder --chown=appuser:appgroup /app/routes ./routes
 COPY --from=builder --chown=appuser:appgroup /app/utils ./utils
 COPY --from=builder --chown=appuser:appgroup /app/scripts ./scripts
+RUN chown -R appuser:appgroup /home/appuser/app
+USER appuser
 
 EXPOSE 3000
 

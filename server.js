@@ -1,30 +1,59 @@
-require('dotenv').config();
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const mongoSanitize = require('express-mongo-sanitize');
+require("dotenv").config();
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+const mongoSanitize = require("express-mongo-sanitize");
+const compression = require("compression");
+const morgan = require("morgan");
 
 const app = express();
 
+const PORT = process.env.PORT || 5000;
+const MONGO_URI = process.env.MONGO_URI;
+const JWT_SECRET = process.env.JWT_SECRET;
+const NODE_ENV = process.env.NODE_ENV || "development";
+
+if (!MONGO_URI) {
+  console.error("FATAL ERROR: MONGO_URI is not defined.");
+  process.exit(1);
+}
+
+if (!JWT_SECRET) {
+  console.error("FATAL ERROR: JWT_SECRET is not defined.");
+  process.exit(1);
+}
+
+app.disable("x-powered-by");
+app.set("trust proxy", 1);
+
 app.use(helmet());
+app.use(compression());
+app.use(morgan(NODE_ENV === "production" ? "combined" : "dev"));
 
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  message: 'Too many requests from this IP, please try again after 15 minutes.',
+  message: "Too many requests from this IP, please try again after 15 minutes.",
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (_req, res) => {
+    res.status(429).json({
+      success: false,
+      message:
+        "Too many requests from this IP, please try again after 15 minutes.",
+    });
+  },
 });
 app.use(globalLimiter);
 
-app.use(express.json());
+app.use(express.json({ limit: "10kb" }));
 app.use(mongoSanitize());
 
 const allowedOrigins = [
-  'http://localhost:3000',
-  'https://beathub-frontend.com'
+  "http://localhost:3000",
+  "https://beathub-frontend.com",
 ];
 
 const corsOptionsProd = {
@@ -32,46 +61,59 @@ const corsOptionsProd = {
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      callback(new Error('CORS policy violation'), false);
+      callback(new Error("CORS policy violation"), false);
     }
   },
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 204,
 };
 
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === "production") {
   app.use(cors(corsOptionsProd));
 } else {
   app.use(cors());
 }
 
+app.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok", environment: NODE_ENV });
+});
+
 // Mount the songs routes
-const songsRouter = require('./routes/songs');
-app.use('/api', songsRouter); // It was defined as router.get('/songs', ...) in routes/songs.js
+const songsRouter = require("./routes/songs");
+const authRouter = require("./routes/auth");
+app.use("/api/auth", authRouter);
+app.use("/api", songsRouter); // It was defined as router.get('/songs', ...) in routes/songs.js
 
-const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI;
-const JWT_SECRET = process.env.JWT_SECRET;
-const NODE_ENV = process.env.NODE_ENV || 'development';
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: "Route not found",
+  });
+});
 
-if (!MONGO_URI) {
-  console.error('FATAL ERROR: MONGO_URI is not defined.');
-  process.exit(1);
-}
+app.use((err, _req, res, _next) => {
+  const statusCode = err.statusCode || 500;
+  const message =
+    NODE_ENV === "production" && statusCode === 500
+      ? "Internal server error"
+      : err.message;
 
-if (!JWT_SECRET) {
-  console.error('FATAL ERROR: JWT_SECRET is not defined.');
-  process.exit(1);
-}
+  res.status(statusCode).json({
+    success: false,
+    message,
+  });
+});
 
-mongoose.connect(MONGO_URI)
+mongoose
+  .connect(MONGO_URI)
   .then(() => {
-    console.log('Connected to MongoDB');
+    console.log("Connected to MongoDB");
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
   })
   .catch((error) => {
-    console.error('Error connecting to MongoDB:', error);
+    console.error("Error connecting to MongoDB:", error);
+    process.exit(1);
   });

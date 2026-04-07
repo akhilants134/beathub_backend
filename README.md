@@ -20,6 +20,13 @@ BeatHub is a robust, Node.js-based music streaming and sharing platform backend.
 
 ## Getting Started
 
+### Production Verification
+
+- Live URL: https://your-render-api-url.onrender.com
+- Admin credentials: `admin@beathub.dev` / `Admin1234!`
+- User credentials: `user@beathub.dev` / `User1234!`
+- Key endpoints: `POST /api/auth/login`, `GET /api/auth/me`, `GET /api/songs`, `POST /api/songs` (admin only)
+
 ### Prerequisites
 
 - Node.js (v18 or higher)
@@ -49,14 +56,9 @@ npm install
 cp .env.example .env
 ```
 
-For host-based local runs (`npm start`), update `MONGO_URI` to your local/Atlas URI as needed.
+Fill in `MONGO_URI`, `JWT_SECRET`, `JWT_EXPIRES_IN`, and the Mongo root credentials before starting locally.
 
-For Docker Compose, the default value already points to the `db` service on the Compose network:
-
-```env
-MONGO_URI=mongodb://devuser:devpassword@db:27017/beathub_dev?authSource=admin
-
-```
+For host-based local runs (`npm start`), point `MONGO_URI` at your local MongoDB or Atlas cluster.
 
 4. Seed the Database (Optional):
    Populate your database with sample artists, albums, and songs:
@@ -116,23 +118,14 @@ The Compose file defines:
 - named volume `db-data` mapped to `/data/db` for persistence
 - internal service networking, so API connects with hostname `db`
 
-### Assignment Note: Production vs Local Environment Variables
+### Security Notes
 
-Local development with Compose:
-
-- You can set non-sensitive defaults directly in `docker-compose.yml` (for example `PORT`, local Mongo hostnames, dev-only values).
-- Compose injects these values into containers at runtime, so your app reads them from `process.env`.
-
-Production deployment:
-
-- Secrets like `JWT_SECRET` and production database credentials should not be hardcoded in source-controlled files.
-- Use your platform's secret/environment manager (for example AWS/GCP/Azure environment settings, secret stores, or Kubernetes secrets).
-
-Why `dotenv` is less relevant for variables set in Compose:
-
-- `dotenv` only reads from a `.env` file inside the application runtime.
-- If Docker Compose already injects variables into the container environment, `process.env` already has them, so `dotenv` is not required for those specific values.
-- `dotenv` remains useful for non-containerized local runs (`npm start` on host machine).
+- JWTs are issued by `POST /api/auth/login`.
+- `GET /api/auth/me` requires a valid Bearer token.
+- `POST /api/songs` requires an admin token and returns `403` for regular users.
+- Rate limiting is enabled globally and returns `429` after abuse.
+- Song listing uses `page` and `limit` query parameters and returns pagination metadata.
+- `password` fields are excluded from query results by default.
 
 ## Data Schema
 
