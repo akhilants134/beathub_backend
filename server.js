@@ -14,6 +14,11 @@ const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET;
 const NODE_ENV = process.env.NODE_ENV || "development";
+const RATE_LIMIT_WINDOW_MINUTES = Number.parseInt(
+  process.env.RATE_LIMIT_WINDOW_MINUTES || "15",
+  10,
+);
+const RATE_LIMIT_MAX = Number.parseInt(process.env.RATE_LIMIT_MAX || "20", 10);
 
 if (!MONGO_URI) {
   console.error("FATAL ERROR: MONGO_URI is not defined.");
@@ -33,16 +38,15 @@ app.use(compression());
 app.use(morgan(NODE_ENV === "production" ? "combined" : "dev"));
 
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: "Too many requests from this IP, please try again after 15 minutes.",
+  windowMs: RATE_LIMIT_WINDOW_MINUTES * 60 * 1000,
+  max: RATE_LIMIT_MAX,
+  message: `Too many requests from this IP, please try again after ${RATE_LIMIT_WINDOW_MINUTES} minutes.`,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (_req, res) => {
     res.status(429).json({
       success: false,
-      message:
-        "Too many requests from this IP, please try again after 15 minutes.",
+      message: `Too many requests from this IP, please try again after ${RATE_LIMIT_WINDOW_MINUTES} minutes.`,
     });
   },
 });

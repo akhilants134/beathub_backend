@@ -22,10 +22,24 @@ BeatHub is a robust, Node.js-based music streaming and sharing platform backend.
 
 ### Production Verification
 
-- Live URL: https://your-render-api-url.onrender.com
-- Admin credentials: `admin@beathub.dev` / `Admin1234!`
-- User credentials: `user@beathub.dev` / `User1234!`
-- Key endpoints: `POST /api/auth/login`, `GET /api/auth/me`, `GET /api/songs`, `POST /api/songs` (admin only)
+- Live URL: REPLACE_WITH_YOUR_RENDER_URL
+- Admin credentials: set from `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`
+- User credentials: set from `SEED_USER_EMAIL` / `SEED_USER_PASSWORD`
+- Key endpoints:
+  - `POST /api/auth/login`
+  - `GET /api/auth/me` (protected)
+  - `GET /api/songs?page=1&limit=10` (paginated)
+  - `POST /api/songs` (admin only)
+
+### Features Implemented
+
+- JWT authentication (`POST /api/auth/login` issues tokens)
+- RBAC authorization (`POST /api/songs` restricted to `admin`)
+- Protected routes (`401` returned for missing/invalid token)
+- Global rate limiting (`429` returned when limit exceeded)
+- Pagination for song listing (`page` and `limit` query params)
+- Docker containerization (`Dockerfile`, `docker-compose.yml`)
+- MongoDB Atlas-ready configuration using environment variables only
 
 ### Render Deployment
 
@@ -71,14 +85,20 @@ cp .env.example .env
 
 Fill in `MONGO_URI`, `JWT_SECRET`, `JWT_EXPIRES_IN`, and the Mongo root credentials before starting locally.
 
+For seeding test users, also fill:
+
+- `SEED_ADMIN_EMAIL`
+- `SEED_ADMIN_PASSWORD`
+- `SEED_USER_EMAIL`
+- `SEED_USER_PASSWORD`
+
 For host-based local runs (`npm start`), point `MONGO_URI` at your local MongoDB or Atlas cluster.
 
 4. Seed the Database (Optional):
    Populate your database with sample artists, albums, and songs:
 
 ```bash
-node seed.js
-
+node scripts/seed.js
 ```
 
 5. Start the Server:
@@ -130,6 +150,45 @@ The Compose file defines:
 - `db` service using `mongo:6`
 - named volume `db-data` mapped to `/data/db` for persistence
 - internal service networking, so API connects with hostname `db`
+
+### Sign-Off Quick Checks (Live URL)
+
+Replace `LIVE_URL` below with your deployed Render URL.
+
+1. Login and receive JWT:
+
+```bash
+curl -s -X POST "LIVE_URL/api/auth/login" \
+   -H "Content-Type: application/json" \
+   -d '{"email":"<admin_email>","password":"<admin_password>"}'
+```
+
+2. Confirm protected route blocks unauthenticated access (`401`):
+
+```bash
+curl -i "LIVE_URL/api/auth/me"
+```
+
+3. Confirm RBAC blocks regular user on admin route (`403`):
+
+```bash
+curl -i -X POST "LIVE_URL/api/songs" \
+   -H "Authorization: Bearer <user_token>" \
+   -H "Content-Type: application/json" \
+   -d '{"title":"Blocked Song","artist":"507f1f77bcf86cd799439011","duration":180,"audioUrl":"https://example.com/audio.mp3"}'
+```
+
+4. Verify pagination:
+
+```bash
+curl -s "LIVE_URL/api/songs?page=2&limit=5"
+```
+
+5. Trigger rate limiting (`429` expected near configured max):
+
+```bash
+for i in {1..25}; do curl -s -o /dev/null -w "%{http_code}\n" "LIVE_URL/health"; done
+```
 
 ### Security Notes
 

@@ -4,7 +4,23 @@ const Artist = require("../models/Artist");
 const Song = require("../models/Song");
 const User = require("../models/User");
 
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/beathub";
+const MONGO_URI = process.env.MONGO_URI;
+const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD;
+const USER_EMAIL = process.env.SEED_USER_EMAIL;
+const USER_PASSWORD = process.env.SEED_USER_PASSWORD;
+
+if (!MONGO_URI) {
+  console.error("SEED ERROR: MONGO_URI is required.");
+  process.exit(1);
+}
+
+if (!ADMIN_EMAIL || !ADMIN_PASSWORD || !USER_EMAIL || !USER_PASSWORD) {
+  console.error(
+    "SEED ERROR: Set SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD, SEED_USER_EMAIL, and SEED_USER_PASSWORD.",
+  );
+  process.exit(1);
+}
 
 const seedSongs = async () => {
   try {
@@ -26,14 +42,14 @@ const seedSongs = async () => {
     await User.create([
       {
         username: "Admin User",
-        email: "admin@beathub.dev",
-        password: "Admin1234!",
+        email: ADMIN_EMAIL,
+        password: ADMIN_PASSWORD,
         role: "admin",
       },
       {
         username: "Regular User",
-        email: "user@beathub.dev",
-        password: "User1234!",
+        email: USER_EMAIL,
+        password: USER_PASSWORD,
         role: "user",
       },
     ]);
