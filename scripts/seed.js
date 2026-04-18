@@ -1,8 +1,8 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
-const Artist = require("../models/Artist");
-const Song = require("../models/Song");
-const User = require("../models/User");
+const Artist = require("../src/models/Artist");
+const Song = require("../src/models/Song");
+const User = require("../src/models/User");
 
 const MONGO_URI = process.env.MONGO_URI;
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL;

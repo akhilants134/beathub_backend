@@ -18,14 +18,8 @@ ENV NODE_ENV=production
 
 COPY --from=builder --chown=appuser:appgroup /app/package*.json ./
 COPY --from=builder --chown=appuser:appgroup /app/node_modules ./node_modules
-COPY --from=builder --chown=appuser:appgroup /app/app.js ./app.js
 COPY --from=builder --chown=appuser:appgroup /app/server.js ./server.js
-COPY --from=builder --chown=appuser:appgroup /app/config ./config
-COPY --from=builder --chown=appuser:appgroup /app/controllers ./controllers
-COPY --from=builder --chown=appuser:appgroup /app/middleware ./middleware
-COPY --from=builder --chown=appuser:appgroup /app/models ./models
-COPY --from=builder --chown=appuser:appgroup /app/routes ./routes
-COPY --from=builder --chown=appuser:appgroup /app/utils ./utils
+COPY --from=builder --chown=appuser:appgroup /app/src ./src
 COPY --from=builder --chown=appuser:appgroup /app/scripts ./scripts
 RUN chown -R appuser:appgroup /home/appuser/app
 USER appuser
