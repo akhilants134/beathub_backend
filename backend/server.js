@@ -1,0 +1,14 @@
+// server.js
+// Main entry point for BeatHub backend with OpenTelemetry instrumentation
+
+// --- OpenTelemetry Instrumentation ---
+require("./otel-instrumentation");
+
+// --- Express App ---
+const app = require("./src/app");
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`BeatHub backend listening on port ${PORT}`);
+});
