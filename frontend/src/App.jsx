@@ -1,17 +1,25 @@
+import React, { useState, useEffect } from "react";
 import "./App.css";
+import Register from "./Register.jsx";
+import Login from "./Login.jsx";
 
 function App() {
-  return (
-    <div className="beathub-landing">
-      <header className="beathub-header">
-        <h1>🎵 BeatHub</h1>
-        <nav>
-          <a href="#features">Features</a>
-          <a href="#login">Login</a>
-          <a href="#register">Register</a>
-        </nav>
-      </header>
-      <main>
+  const [route, setRoute] = useState(window.location.hash);
+
+  useEffect(() => {
+    const onHashChange = () => setRoute(window.location.hash);
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  let content;
+  if (route === "#register") {
+    content = <Register />;
+  } else if (route === "#login") {
+    content = <Login />;
+  } else {
+    content = (
+      <>
         <section className="hero-section">
           <h2>Stream, Share, and Discover Music</h2>
           <p>
@@ -38,7 +46,21 @@ function App() {
             <li>🌐 Social sharing</li>
           </ul>
         </section>
-      </main>
+      </>
+    );
+  }
+
+  return (
+    <div className="beathub-landing">
+      <header className="beathub-header">
+        <h1>🎵 BeatHub</h1>
+        <nav>
+          <a href="#features">Features</a>
+          <a href="#login">Login</a>
+          <a href="#register">Register</a>
+        </nav>
+      </header>
+      <main>{content}</main>
       <footer className="beathub-footer">
         <small>
           © {new Date().getFullYear()} BeatHub. All rights reserved.
